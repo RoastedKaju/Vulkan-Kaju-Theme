@@ -15,11 +15,11 @@ public:
     inline std::vector<VkImage> &getImages() { return images; }
     inline std::vector<VkImageView> &getImageViews() { return views; }
     inline std::vector<VkSemaphore> &getRenderCompleteSemaphores() { return render_complete_semaphores; }
-    inline VkFormat getFormat() const { return format; }
+    inline const VkFormat &getFormat() const { return format; }
     inline VkExtent2D getExtent() const { return extent; }
 
     void createSwapchain(Device &device, KajuWindow &window);
-    void destroySwapchain(VkDevice device);
+    void destroySwapchain(Device &device);
 
 private:
     VkSwapchainKHR swapchain;

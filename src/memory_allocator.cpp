@@ -1,11 +1,14 @@
 #include "memory_allocator.h"
 
-void MemoryAllocator::createAllocator(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device)
+#include "instance.h"
+#include "device.h"
+
+void MemoryAllocator::createAllocator(Instance &instance, Device &device)
 {
     VmaAllocatorCreateInfo create_info{};
-    create_info.physicalDevice = physical_device;
-    create_info.device = device;
-    create_info.instance = instance;
+    create_info.physicalDevice = device.getPhysicalDevice();
+    create_info.device = device.getDevice();
+    create_info.instance = instance.getInstance();
     create_info.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
 
     vmaCreateAllocator(&create_info, &allocator);
@@ -15,6 +18,11 @@ void MemoryAllocator::createAllocator(VkInstance instance, VkPhysicalDevice phys
                                       { vmaDestroyAllocator(allocator); });
 
     std::cout << "Created VMA memory allocator.\n";
+}
+
+void MemoryAllocator::destroyAllocator()
+{
+    global_deletion_queue.flush();
 }
 
 void DeletionQueue::pushDeletor(std::function<void()> &&function)

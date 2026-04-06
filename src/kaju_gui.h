@@ -15,13 +15,11 @@ public:
 
     void createGuiContext(Device &device, Swapchain &swapchain, KajuWindow &window, Instance &instance);
     void beginFrame();
-    void endFrame(VkCommandBuffer command_buffer, uint32_t swapchain_image_index);
+    void endFrame(VkCommandBuffer command_buffer, Swapchain& swapchain, uint32_t swapchain_image_index);
     void destroyGuiContext(Device &device);
 
     void showDemo();
 
 private:
     VkDescriptorPool descriptor_pool;
-    VkRenderPass render_pass;
-    std::vector<VkFramebuffer> frame_buffers;
 };

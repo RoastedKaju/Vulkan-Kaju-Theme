@@ -2,6 +2,9 @@
 
 #include "common_types.h"
 
+class Instance;
+class Device;
+
 struct DeletionQueue
 {
     std::deque<std::function<void()>> deletors;
@@ -16,7 +19,8 @@ public:
     MemoryAllocator() = default;
     ~MemoryAllocator() = default;
 
-    void createAllocator(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device);
+    void createAllocator(Instance &instance, Device &device);
+    void destroyAllocator();
 
     inline DeletionQueue &getGlobalDeletionQueue() { return global_deletion_queue; }
 

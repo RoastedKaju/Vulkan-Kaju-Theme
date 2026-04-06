@@ -43,19 +43,19 @@ void Swapchain::createSwapchain(Device &device, KajuWindow &window)
     }
 }
 
-void Swapchain::destroySwapchain(VkDevice device)
+void Swapchain::destroySwapchain(Device &device)
 {
-    vkDestroySwapchainKHR(device, swapchain, nullptr);
+    vkDestroySwapchainKHR(device.getDevice(), swapchain, nullptr);
 
     // Destroy swapchain resources
     for (int i = 0; i < views.size(); ++i)
     {
-        vkDestroyImageView(device, views[i], nullptr);
+        vkDestroyImageView(device.getDevice(), views[i], nullptr);
     }
 
     for (auto semaphore : render_complete_semaphores)
     {
-        vkDestroySemaphore(device, semaphore, nullptr);
+        vkDestroySemaphore(device.getDevice(), semaphore, nullptr);
     }
 
     render_complete_semaphores.clear();

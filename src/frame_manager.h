@@ -23,7 +23,7 @@ public:
     inline FrameData &getFrame(uint32_t frame_number) { return frames[frame_number % overlap_frame_count]; }
 
     void createFrameData(Device &device);
-    void destroyFrameData(VkDevice device);
+    void destroyFrameData(Device &device);
 
 private:
     uint8_t overlap_frame_count;

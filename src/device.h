@@ -2,6 +2,9 @@
 
 #include "common_types.h"
 
+class Instance;
+class KajuWindow;
+
 class Device
 {
 public:
@@ -13,7 +16,7 @@ public:
     inline VkQueue getGraphicsQueue() const { return graphics_queue; }
     inline uint32_t getGraphicsQueueFamily() const { return graphics_queue_family; }
 
-    void createDevice(vkb::Instance &vkb_instance, VkSurfaceKHR surface);
+    void createDevice(Instance &instance, KajuWindow &window);
     void deviceWaitIdle();
     void destroyDevice();
 

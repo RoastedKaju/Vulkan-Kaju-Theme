@@ -1,5 +1,7 @@
 #include "kaju_window.h"
 
+#include "Instance.h"
+
 KajuWindow::KajuWindow(uint32_t width, uint32_t height)
     : window(nullptr),
       extent(),
@@ -29,15 +31,15 @@ KajuWindow::~KajuWindow()
     glfwTerminate();
 }
 
-void KajuWindow::createSurface(VkInstance instance)
+void KajuWindow::createSurface(Instance &instance)
 {
-    if (glfwCreateWindowSurface(instance, window, nullptr, &surface) != VK_SUCCESS)
+    if (glfwCreateWindowSurface(instance.getInstance(), window, nullptr, &surface) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create window surface.\n");
     }
 }
 
-void KajuWindow::destroySurface(VkInstance instance)
+void KajuWindow::destroySurface(Instance &instance)
 {
-    vkDestroySurfaceKHR(instance, surface, nullptr);
+    vkDestroySurfaceKHR(instance.getInstance(), surface, nullptr);
 }

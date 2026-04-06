@@ -1,16 +1,19 @@
 #include "device.h"
 
+#include "instance.h"
+#include "kaju_window.h"
+
 Device::Device()
 {
-    std::cout << "Creating device manager.\n";
+    std::cout << "Creating Device manager.\n";
 }
 
 Device::~Device()
 {
-    std::cout << "Destroying device manager.\n";
+    std::cout << "Destroying Device manager.\n";
 }
 
-void Device::createDevice(vkb::Instance &vkb_instance, VkSurfaceKHR surface)
+void Device::createDevice(Instance &instance, KajuWindow &window)
 {
     VkPhysicalDeviceVulkan13Features features_13{.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES};
     features_13.dynamicRendering = true;
@@ -21,12 +24,12 @@ void Device::createDevice(vkb::Instance &vkb_instance, VkSurfaceKHR surface)
     features_12.descriptorIndexing = true;
 
     // Select a physical device
-    vkb::PhysicalDeviceSelector selector{vkb_instance, surface};
+    vkb::PhysicalDeviceSelector selector{instance.getVkbInstance(), window.getSurface()};
     vkb::PhysicalDevice vkb_phyiscal_device = selector
                                                   .set_minimum_version(1, 3)
                                                   .set_required_features_13(features_13)
                                                   .set_required_features_12(features_12)
-                                                  .set_surface(surface)
+                                                  .set_surface(window.getSurface())
                                                   .select()
                                                   .value();
 

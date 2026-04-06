@@ -1,4 +1,5 @@
 #include "frame_manager.h"
+
 #include "device.h"
 
 FrameManager::FrameManager(uint8_t overlap_count)
@@ -67,15 +68,15 @@ void FrameManager::createSyncStructure(VkDevice device)
     }
 }
 
-void FrameManager::destroyFrameData(VkDevice device)
+void FrameManager::destroyFrameData(Device &device)
 {
     for (int i = 0; i < overlap_frame_count; ++i)
     {
-        vkDestroyCommandPool(device, frames[i].command_pool, nullptr);
+        vkDestroyCommandPool(device.getDevice(), frames[i].command_pool, nullptr);
 
         // destroy sync objects
-        vkDestroyFence(device, frames[i].render_fence, nullptr);
-        vkDestroySemaphore(device, frames[i].image_available_semaphore, nullptr);
+        vkDestroyFence(device.getDevice(), frames[i].render_fence, nullptr);
+        vkDestroySemaphore(device.getDevice(), frames[i].image_available_semaphore, nullptr);
 
         frames[i].frame_deletion_queue.flush();
     }

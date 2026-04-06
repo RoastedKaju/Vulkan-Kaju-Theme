@@ -1,4 +1,5 @@
 #include "kaju_gui.h"
+
 #include "device.h"
 #include "swapchain.h"
 #include "kaju_window.h"
@@ -54,41 +55,6 @@ void KajuGui::createGuiContext(Device &device, Swapchain &swapchain, KajuWindow 
     dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
-    VkRenderPassCreateInfo create_info{};
-    create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    create_info.attachmentCount = 1;
-    create_info.pAttachments = &color_attachment;
-    create_info.subpassCount = 1;
-    create_info.pSubpasses = &subpass;
-    create_info.dependencyCount = 1;
-    create_info.pDependencies = &dependency;
-
-    if (vkCreateRenderPass(device.getDevice(), &create_info, nullptr, &render_pass) != VK_SUCCESS)
-    {
-        throw std::runtime_error("Failed to create ImGUI render pass.");
-    }
-
-    // Framebuffers
-    frame_buffers.resize(swapchain.getImageViews().size());
-    for (size_t i = 0; i < frame_buffers.size(); ++i)
-    {
-        VkImageView attachment = swapchain.getImageViews()[i];
-
-        VkFramebufferCreateInfo frame_buffer_create_info{};
-        frame_buffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        frame_buffer_create_info.renderPass = render_pass;
-        frame_buffer_create_info.attachmentCount = 1;
-        frame_buffer_create_info.pAttachments = &attachment;
-        frame_buffer_create_info.width = swapchain.getExtent().width;
-        frame_buffer_create_info.height = swapchain.getExtent().height;
-        frame_buffer_create_info.layers = 1;
-
-        if (vkCreateFramebuffer(device.getDevice(), &frame_buffer_create_info, nullptr, &frame_buffers[i]) != VK_SUCCESS)
-        {
-            throw std::runtime_error("Failed to create ImGUI frame buffer");
-        }
-    }
-
     // ImGUI initialization
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -96,9 +62,15 @@ void KajuGui::createGuiContext(Device &device, Swapchain &swapchain, KajuWindow 
 
     ImGui_ImplGlfw_InitForVulkan(window.getWindow(), true);
 
+    // Tell ImGui what format the swapchain image is - required for dynamic rendering
+    VkPipelineRenderingCreateInfo pipeline_rendering_info{};
+    pipeline_rendering_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+    pipeline_rendering_info.colorAttachmentCount = 1;
+    pipeline_rendering_info.pColorAttachmentFormats = &swapchain.getFormat();
+
     ImGui_ImplVulkan_PipelineInfo pipeline_info{};
-    pipeline_info.RenderPass = render_pass;
     pipeline_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+    pipeline_info.PipelineRenderingCreateInfo = pipeline_rendering_info;
 
     ImGui_ImplVulkan_InitInfo imgui_vulkan_init_info{};
     imgui_vulkan_init_info.Instance = instance.getInstance();
@@ -110,6 +82,7 @@ void KajuGui::createGuiContext(Device &device, Swapchain &swapchain, KajuWindow 
     imgui_vulkan_init_info.MinImageCount = 2;
     imgui_vulkan_init_info.ImageCount = static_cast<uint32_t>(swapchain.getImages().size());
     imgui_vulkan_init_info.PipelineInfoMain = pipeline_info;
+    imgui_vulkan_init_info.UseDynamicRendering = true;
 
     ImGui_ImplVulkan_Init(&imgui_vulkan_init_info);
 }
@@ -121,25 +94,31 @@ void KajuGui::beginFrame()
     ImGui::NewFrame();
 }
 
-void KajuGui::endFrame(VkCommandBuffer command_buffer, uint32_t swapchain_image_index)
+void KajuGui::endFrame(VkCommandBuffer command_buffer, Swapchain &swapchain, uint32_t swapchain_image_index)
 {
     ImGui::Render();
 
     VkClearValue clear_value{};
     clear_value.color = {{0.1f, 0.2f, 0.5f, 1.0f}};
 
-    VkRenderPassBeginInfo begin_info{};
-    begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    begin_info.renderPass = render_pass;
-    begin_info.framebuffer = frame_buffers[swapchain_image_index];
-    begin_info.renderArea.offset = {0, 0};
-    begin_info.renderArea.extent = VkExtent2D{800, 600}; // Fix this
-    begin_info.clearValueCount = 1;
-    begin_info.pClearValues = &clear_value;
+    VkRenderingAttachmentInfo color_attachment{};
+    color_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+    color_attachment.imageView = swapchain.getImageViews()[swapchain_image_index];
+    color_attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    color_attachment.clearValue = clear_value;
 
-    vkCmdBeginRenderPass(command_buffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
+    VkRenderingInfo rendering_info{};
+    rendering_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+    rendering_info.renderArea = {{0, 0}, swapchain.getExtent()};
+    rendering_info.layerCount = 1;
+    rendering_info.colorAttachmentCount = 1;
+    rendering_info.pColorAttachments = &color_attachment;
+
+    vkCmdBeginRendering(command_buffer, &rendering_info);
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), command_buffer);
-    vkCmdEndRenderPass(command_buffer);
+    vkCmdEndRendering(command_buffer);
 }
 
 void KajuGui::destroyGuiContext(Device &device)
@@ -148,19 +127,12 @@ void KajuGui::destroyGuiContext(Device &device)
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
 
-    for (VkFramebuffer frame_buffer : frame_buffers)
-    {
-        vkDestroyFramebuffer(device.getDevice(), frame_buffer, nullptr);
-    }
-
-    vkDestroyRenderPass(device.getDevice(), render_pass, nullptr);
     vkDestroyDescriptorPool(device.getDevice(), descriptor_pool, nullptr);
 }
 
 void KajuGui::showDemo()
 {
-    // Create a window called "My First Tool", with a menu bar.
-    ImGui::Begin("My First Tool", static_cast<bool *>(0), ImGuiWindowFlags_MenuBar);
+    ImGui::Begin("Demo", static_cast<bool *>(0), ImGuiWindowFlags_MenuBar);
     if (ImGui::BeginMenuBar())
     {
         if (ImGui::BeginMenu("File"))
