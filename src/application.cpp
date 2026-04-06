@@ -53,9 +53,9 @@ int main()
     FrameManager app_frame_manager{2};
     KajuGui app_gui;
 
-    app_window.createSurface(app_instance.getInstance());
-    app_device.createDevice(app_instance.getVkbInstance(), app_window.getSurface());
-    app_allocator.createAllocator(app_instance.getInstance(), app_device.getPhysicalDevice(), app_device.getDevice());
+    app_window.createSurface(app_instance);
+    app_device.createDevice(app_instance, app_window);
+    app_allocator.createAllocator(app_instance, app_device);
     app_swapchain.createSwapchain(app_device, app_window);
     app_frame_manager.createFrameData(app_device);
     app_gui.createGuiContext(app_device, app_swapchain, app_window, app_instance);
@@ -111,42 +111,25 @@ int main()
             throw std::runtime_error("Failed to begin command buffer.");
         }
 
-        // // Undefined -> Transfer destination
-        // transitionImage(cmd_buffer, swapchain_image,
-        //                 VK_IMAGE_LAYOUT_UNDEFINED,
-        //                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        //                 0,
-        //                 VK_ACCESS_TRANSFER_WRITE_BIT,
-        //                 VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-        //                 VK_PIPELINE_STAGE_TRANSFER_BIT);
-
-        // VkClearColorValue clear_color{};
-        // clear_color.float32[0] = 0.1f; // R
-        // clear_color.float32[1] = 0.2f; // G
-        // clear_color.float32[2] = 0.5f; // B
-        // clear_color.float32[3] = 1.0f; // A
-
-        // VkImageSubresourceRange clear_range{};
-        // clear_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        // clear_range.baseMipLevel = 0;
-        // clear_range.levelCount = 1;
-        // clear_range.baseArrayLayer = 0;
-        // clear_range.layerCount = 1;
-
-        // vkCmdClearColorImage(cmd_buffer, swapchain_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &clear_range);
-
-        // // Transfer destination -> present source
-        // transitionImage(cmd_buffer, swapchain_image,
-        //                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        //                 VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-        //                 VK_ACCESS_TRANSFER_WRITE_BIT,
-        //                 0,
-        //                 VK_PIPELINE_STAGE_TRANSFER_BIT,
-        //                 VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+        transitionImage(cmd_buffer, swapchain_image,
+                        VK_IMAGE_LAYOUT_UNDEFINED,
+                        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                        0, // No old access needed for Undefined
+                        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 
         app_gui.beginFrame();
         app_gui.showDemo();
-        app_gui.endFrame(cmd_buffer, swapchain_image_index);
+        app_gui.endFrame(cmd_buffer, app_swapchain, swapchain_image_index);
+
+        transitionImage(cmd_buffer, swapchain_image,
+                        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                        VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                        0, // Present doesn't need specific access here
+                        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 
         if (vkEndCommandBuffer(cmd_buffer) != VK_SUCCESS)
         {
@@ -193,11 +176,11 @@ int main()
     // Clean up
     app_device.deviceWaitIdle();
     app_gui.destroyGuiContext(app_device);
-    app_frame_manager.destroyFrameData(app_device.getDevice());
-    app_allocator.getGlobalDeletionQueue().flush();
-    app_swapchain.destroySwapchain(app_device.getDevice());
+    app_frame_manager.destroyFrameData(app_device);
+    app_allocator.destroyAllocator();
+    app_swapchain.destroySwapchain(app_device);
     app_device.destroyDevice();
-    app_window.destroySurface(app_instance.getInstance());
+    app_window.destroySurface(app_instance);
     app_instance.destroyInstance();
 
     return EXIT_SUCCESS;
