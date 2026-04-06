@@ -98,6 +98,7 @@ void KajuGui::beginFrame()
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
+    // Setup docking space
     ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
     ImGui::DockSpaceOverViewport(ImGui::GetMainViewport()->ID, nullptr, dockspace_flags);
 }
@@ -177,8 +178,13 @@ void KajuGui::showDemo()
     }
     ImGui::EndChild();
     ImGui::End();
-
+    // Another window
     ImGui::Begin("Another Window");
     ImGui::Text("Hello, world %d", 123);
     ImGui::End();
+}
+
+void KajuGui::buildDockingLayout()
+{
+    
 }

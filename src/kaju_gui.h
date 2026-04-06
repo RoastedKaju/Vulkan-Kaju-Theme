@@ -19,6 +19,7 @@ public:
     void destroyGuiContext(Device &device);
 
     void showDemo();
+    void buildDockingLayout();
 
 private:
     VkDescriptorPool descriptor_pool;
