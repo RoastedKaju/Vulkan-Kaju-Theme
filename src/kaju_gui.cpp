@@ -60,6 +60,11 @@ void KajuGui::createGuiContext(Device &device, Swapchain &swapchain, KajuWindow 
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
 
+    ImGuiIO &io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    // Optional: enable multi-viewports
+    // io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+
     ImGui_ImplGlfw_InitForVulkan(window.getWindow(), true);
 
     // Tell ImGui what format the swapchain image is - required for dynamic rendering
@@ -92,11 +97,18 @@ void KajuGui::beginFrame()
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
+
+    ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
+    ImGui::DockSpaceOverViewport(ImGui::GetMainViewport()->ID, nullptr, dockspace_flags);
 }
 
 void KajuGui::endFrame(VkCommandBuffer command_buffer, Swapchain &swapchain, uint32_t swapchain_image_index)
 {
     ImGui::Render();
+
+    // For multi-viewport
+    // ImGui::UpdatePlatformWindows();
+    // ImGui::RenderPlatformWindowsDefault();
 
     VkClearValue clear_value{};
     clear_value.color = {{0.1f, 0.2f, 0.5f, 1.0f}};
@@ -164,5 +176,9 @@ void KajuGui::showDemo()
         ImGui::Text("%04d: Some text", n);
     }
     ImGui::EndChild();
+    ImGui::End();
+
+    ImGui::Begin("Another Window");
+    ImGui::Text("Hello, world %d", 123);
     ImGui::End();
 }
