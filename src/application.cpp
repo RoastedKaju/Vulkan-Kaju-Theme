@@ -9,11 +9,10 @@
 #include "swapchain.h"
 #include "frame_manager.h"
 #include "kaju_gui.h"
+#include "renderer.h"
 
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
-
-static uint32_t frame_counter = 0;
 
 static void transitionImage(VkCommandBuffer cmd,
                             VkImage image,
@@ -52,6 +51,7 @@ int main()
     Swapchain app_swapchain;
     FrameManager app_frame_manager{2};
     KajuGui app_gui;
+    Renderer app_renderer;
 
     app_window.createSurface(app_instance);
     app_device.createDevice(app_instance, app_window);
@@ -75,102 +75,34 @@ int main()
         }
 
         // Draw
-        FrameData &current_frame = app_frame_manager.getFrame(frame_counter);
-        if (vkWaitForFences(app_device.getDevice(), 1, &current_frame.render_fence, VK_TRUE, 1000000000) != VK_SUCCESS)
+        app_renderer.sync(app_frame_manager, app_device, app_swapchain);
+        app_renderer.recordCommands();
+        app_renderer.beginRendering();
         {
-            throw std::runtime_error("Failed to wait for render fence.");
-        }
-        // Delete all resources for current frame
-        current_frame.frame_deletion_queue.flush();
-        // Reset fence
-        if (vkResetFences(app_device.getDevice(), 1, &current_frame.render_fence) != VK_SUCCESS)
-        {
-            throw std::runtime_error("Failed to reset render fence.");
-        }
-        // Request image from swapchain
-        uint32_t swapchain_image_index;
-        VkResult acquire_result = vkAcquireNextImageKHR(app_device.getDevice(), app_swapchain.getSwapchain(), 1000000000, current_frame.image_available_semaphore, VK_NULL_HANDLE, &swapchain_image_index);
-        if (acquire_result != VK_SUCCESS)
-        {
-            throw std::runtime_error("Failed to acquire swapchain image.");
-        }
-        VkImage swapchain_image = app_swapchain.getImages()[swapchain_image_index];
-        // Record commands
-        VkCommandBuffer cmd_buffer = current_frame.command_buffer;
-        // Reset the command buffer before recording commands into it
-        if (vkResetCommandBuffer(cmd_buffer, 0) != VK_SUCCESS)
-        {
-            throw std::runtime_error("Failed to reset command buffer.");
-        }
-        // Begin rendering commands
-        VkCommandBufferBeginInfo begin_info{};
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        if (vkBeginCommandBuffer(cmd_buffer, &begin_info) != VK_SUCCESS)
-        {
-            throw std::runtime_error("Failed to begin command buffer.");
-        }
+            transitionImage(app_renderer.getCommandBuffer(), app_renderer.getSwapchainImage(),
+                            VK_IMAGE_LAYOUT_UNDEFINED,
+                            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                            0, // No old access needed for Undefined
+                            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 
-        transitionImage(cmd_buffer, swapchain_image,
-                        VK_IMAGE_LAYOUT_UNDEFINED,
-                        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                        0, // No old access needed for Undefined
-                        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-                        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+            app_gui.beginFrame();
+            app_gui.buildDockingLayout();
+            app_gui.showDemo();
+            app_gui.endFrame(app_renderer.getCommandBuffer(), app_swapchain, app_renderer.getSwapchainImageIndex());
 
-        app_gui.beginFrame();
-        app_gui.showDemo();
-        app_gui.endFrame(cmd_buffer, app_swapchain, swapchain_image_index);
-
-        transitionImage(cmd_buffer, swapchain_image,
-                        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                        VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-                        0, // Present doesn't need specific access here
-                        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
-
-        if (vkEndCommandBuffer(cmd_buffer) != VK_SUCCESS)
-        {
-            throw std::runtime_error("Failed to end command buffer.");
+            transitionImage(app_renderer.getCommandBuffer(), app_renderer.getSwapchainImage(),
+                            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                            VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                            0, // Present doesn't need specific access here
+                            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
         }
-
+        app_renderer.endRendering();
         // Submit
-        // VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-        VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        VkSubmitInfo submit_info{};
-        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info.waitSemaphoreCount = 1;
-        submit_info.pWaitSemaphores = &current_frame.image_available_semaphore;
-        submit_info.pWaitDstStageMask = &wait_stage;
-        submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &cmd_buffer;
-        submit_info.signalSemaphoreCount = 1;
-        submit_info.pSignalSemaphores = &app_swapchain.getRenderCompleteSemaphores()[swapchain_image_index];
-
-        if (vkQueueSubmit(app_device.getGraphicsQueue(), 1, &submit_info, current_frame.render_fence) != VK_SUCCESS)
-        {
-            throw std::runtime_error("Failed to submit command buffer");
-        }
-
-        // Present
-        VkSwapchainKHR swapchain = app_swapchain.getSwapchain();
-
-        VkPresentInfoKHR present_info{};
-        present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-        present_info.waitSemaphoreCount = 1;
-        present_info.pWaitSemaphores = &app_swapchain.getRenderCompleteSemaphores()[swapchain_image_index];
-        present_info.swapchainCount = 1;
-        present_info.pSwapchains = &swapchain;
-        present_info.pImageIndices = &swapchain_image_index;
-
-        if (vkQueuePresentKHR(app_device.getGraphicsQueue(), &present_info) != VK_SUCCESS)
-        {
-            throw std::runtime_error("Failed to present.");
-        }
-
-        ++frame_counter;
+        app_renderer.submit(app_device, app_swapchain, app_frame_manager);
     }
 
     // Clean up

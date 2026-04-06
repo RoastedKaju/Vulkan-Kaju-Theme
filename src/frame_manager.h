@@ -21,6 +21,7 @@ public:
     ~FrameManager() = default;
 
     inline FrameData &getFrame(uint32_t frame_number) { return frames[frame_number % overlap_frame_count]; }
+    inline uint8_t getOverlapFrameCount() const { return overlap_frame_count; }
 
     void createFrameData(Device &device);
     void destroyFrameData(Device &device);

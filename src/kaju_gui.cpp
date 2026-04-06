@@ -8,6 +8,7 @@
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
+#include <imgui_internal.h>
 
 void KajuGui::createGuiContext(Device &device, Swapchain &swapchain, KajuWindow &window, Instance &instance)
 {
@@ -97,10 +98,6 @@ void KajuGui::beginFrame()
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-
-    // Setup docking space
-    ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
-    ImGui::DockSpaceOverViewport(ImGui::GetMainViewport()->ID, nullptr, dockspace_flags);
 }
 
 void KajuGui::endFrame(VkCommandBuffer command_buffer, Swapchain &swapchain, uint32_t swapchain_image_index)
@@ -186,5 +183,32 @@ void KajuGui::showDemo()
 
 void KajuGui::buildDockingLayout()
 {
-    
+    // Setup docking space
+    ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
+    ImGuiID dockspace_id = ImGui::DockSpaceOverViewport(ImGui::GetMainViewport()->ID, nullptr, dockspace_flags);
+
+    static bool first_time = true;
+
+    if (first_time)
+    {
+        first_time = false;
+
+        // Clear existing layout for this ID
+        ImGui::DockBuilderRemoveNode(dockspace_id);
+        ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);
+        ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetMainViewport()->Size);
+
+        // Split the dockspace
+        ImGuiID dock_main_id = dockspace_id;
+        ImGuiID dock_id_left = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Left, 0.20f, nullptr, &dock_main_id);
+        ImGuiID dock_id_right = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Right, 0.50f, nullptr, &dock_main_id);
+        ImGuiID dock_id_bottom = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Down, 0.20f, nullptr, &dock_main_id);
+
+        // Assign windows to specific dock nodes
+        ImGui::DockBuilderDockWindow("Scene", dock_main_id);
+        ImGui::DockBuilderDockWindow("Demo", dock_id_left);
+        ImGui::DockBuilderDockWindow("Another Window", dock_id_right);
+
+        ImGui::DockBuilderFinish(dockspace_id);
+    }
 }
