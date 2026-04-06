@@ -4,9 +4,9 @@
 [submodule "external/vk_bootstrap"]
 	path = external/vk_bootstrap
 	url = https://github.com/charles-lunarg/vk-bootstrap
-[submodule "external/glfw"]
-	path = external/glfw
-	url = https://github.com/glfw/glfw
 [submodule "external/imgui"]
 	path = external/imgui
 	url = https://github.com/ocornut/imgui.git
+[submodule "external/glfw"]
+	path = external/glfw
+	url = https://github.com/glfw/glfw
