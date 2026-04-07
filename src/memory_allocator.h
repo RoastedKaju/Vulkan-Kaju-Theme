@@ -23,6 +23,7 @@ public:
     void destroyAllocator();
 
     inline DeletionQueue &getGlobalDeletionQueue() { return global_deletion_queue; }
+    inline VmaAllocator getAllocator() const { return allocator; }
 
 private:
     VmaAllocator allocator;

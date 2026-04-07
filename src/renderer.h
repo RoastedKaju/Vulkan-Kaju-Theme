@@ -2,10 +2,14 @@
 
 #include "common_types.h"
 
+#include "image.h"
+
 struct FrameData;
 class FrameManager;
 class Device;
 class Swapchain;
+class MemoryAllocator;
+class KajuWindow;
 
 class Renderer
 {
@@ -18,11 +22,18 @@ public:
     inline VkImage getSwapchainImage() const { return swapchain_image; }
     inline VkCommandBuffer getCommandBuffer() const { return cmd_buffer; }
 
-    void sync(FrameManager& frame_manager, Device &device, Swapchain &swapchain);
+    void createOffscreenRenderTarget(Device &device, MemoryAllocator &allocator, KajuWindow &window);
+    void sync(FrameManager &frame_manager, Device &device, Swapchain &swapchain);
     void recordCommands();
     void beginRendering();
     void endRendering();
-    void submit(Device &device, Swapchain &swapchain, FrameManager& frame_manager);
+    void submit(Device &device, Swapchain &swapchain, FrameManager &frame_manager);
+
+    void prepareSwapchainImage();
+    void finalizeSwapchainImage();
+
+    void prepareOffscreenImage();
+    void transitionOffscreenToShaderRead();
 
 private:
     uint32_t frame_counter = 0;
@@ -30,4 +41,7 @@ private:
     uint32_t swapchain_image_index;
     VkImage swapchain_image;
     VkCommandBuffer cmd_buffer;
+
+    // Offscreen draw resources
+    Image offscreen_render_target;
 };
