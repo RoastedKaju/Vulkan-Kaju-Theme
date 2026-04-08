@@ -120,7 +120,7 @@ void Renderer::endRendering()
     }
 }
 
-void Renderer::submit(Device &device, Swapchain &swapchain, FrameManager &frame_manager)
+void Renderer::submit(Device &device, Swapchain &swapchain, FrameManager &frame_manager, KajuWindow &window)
 {
     // Submit
     // VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
@@ -151,7 +151,18 @@ void Renderer::submit(Device &device, Swapchain &swapchain, FrameManager &frame_
     present_info.pSwapchains = &present_swapchain;
     present_info.pImageIndices = &swapchain_image_index;
 
-    if (vkQueuePresentKHR(device.getGraphicsQueue(), &present_info) != VK_SUCCESS)
+    VkResult present_result = vkQueuePresentKHR(device.getGraphicsQueue(), &present_info);
+
+    if (present_result == VK_ERROR_OUT_OF_DATE_KHR || present_result == VK_SUBOPTIMAL_KHR || window.frameBufferResized)
+    {
+        device.deviceWaitIdle();
+        window.frameBufferResized = false;
+        // recreate swapchain
+        swapchain.createSwapchain(device, window);
+        return;
+    }
+
+    if (present_result != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to present.");
     }

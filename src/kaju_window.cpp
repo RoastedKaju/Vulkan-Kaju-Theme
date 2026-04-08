@@ -21,6 +21,10 @@ KajuWindow::KajuWindow(uint32_t width, uint32_t height)
     extent.height = height;
 
     window = glfwCreateWindow(extent.width, extent.height, "Kaju Theme Window", nullptr, nullptr);
+
+    // Window resize
+    glfwSetWindowUserPointer(window, this);
+    glfwSetFramebufferSizeCallback(window, &frameResizeCallback);
 }
 
 KajuWindow::~KajuWindow()

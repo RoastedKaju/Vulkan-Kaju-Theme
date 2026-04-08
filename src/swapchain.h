@@ -22,7 +22,7 @@ public:
     void destroySwapchain(Device &device);
 
 private:
-    VkSwapchainKHR swapchain;
+    VkSwapchainKHR swapchain = VK_NULL_HANDLE;
     VkFormat format;
     std::vector<VkImage> images;
     std::vector<VkImageView> views;

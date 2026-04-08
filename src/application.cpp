@@ -16,7 +16,7 @@
 
 int main()
 {
-    KajuWindow app_window{800, 600};
+    KajuWindow app_window{1024, 768};
     Instance app_instance;
     Device app_device;
     MemoryAllocator app_allocator;
@@ -53,7 +53,11 @@ int main()
         app_renderer.beginRendering();
         {
             app_renderer.prepareOffscreenImage();
-            // Draw 3D here (vkCmdBeginRendering and end)
+            // vkCmdBeginRendering(app_renderer.getCommandBuffer(), &rendering_info);
+            // {
+
+            // }
+            // vkCmdEndRendering(app_renderer.getCommandBuffer());
             app_renderer.transitionOffscreenToShaderRead();
 
             app_renderer.prepareSwapchainImage();
@@ -67,7 +71,7 @@ int main()
         }
         app_renderer.endRendering();
         // Submit
-        app_renderer.submit(app_device, app_swapchain, app_frame_manager);
+        app_renderer.submit(app_device, app_swapchain, app_frame_manager, app_window);
     }
 
     // Clean up

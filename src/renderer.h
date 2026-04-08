@@ -27,7 +27,7 @@ public:
     void recordCommands();
     void beginRendering();
     void endRendering();
-    void submit(Device &device, Swapchain &swapchain, FrameManager &frame_manager);
+    void submit(Device &device, Swapchain &swapchain, FrameManager &frame_manager, KajuWindow &window);
 
     void prepareSwapchainImage();
     void finalizeSwapchainImage();
