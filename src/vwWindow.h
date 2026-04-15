@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vwCommon.h"
+#include "vwUtils.h"
 
 namespace vw
 {
@@ -15,10 +16,8 @@ namespace vw
         void createWindow(const int width, const int height);
         void destroyWindow();
 
-        void draw();
-
-        void createSurface(Instance& instance);
-        void destroySurface(Instance& instance);
+        void createSurface(Instance &instance);
+        void destroySurface(Instance &instance);
 
         inline GLFWwindow *getWindow() { return window; }
         inline VkExtent2D getWindowExtent() const { return extent; }

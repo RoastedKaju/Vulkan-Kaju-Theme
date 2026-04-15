@@ -1,5 +1,6 @@
 #include "vwWindow.h"
 #include "vwInstance.h"
+#include "vwSwapchain.h"
 
 void vw::Window::createWindow(const int width, const int height)
 {
@@ -30,22 +31,6 @@ void vw::Window::destroyWindow()
     glfwDestroyWindow(window);
     glfwTerminate();
     std::cout << "Window destroyed\n";
-}
-
-void vw::Window::draw()
-{
-    while (!glfwWindowShouldClose(window))
-    {
-        glfwPollEvents();
-
-        // skip frame if invalid frame size
-        int width = 0, height = 0;
-        glfwGetFramebufferSize(window, &width, &height);
-        if (!width || !height)
-        {
-            continue;
-        }
-    }
 }
 
 void vw::Window::createSurface(Instance &instance)

@@ -36,4 +36,5 @@ void vw::Allocator::createAllocator(Instance &instance)
 void vw::Allocator::destroyAllocator()
 {
     globalDeletionQueue.flush();
+    std::cout << "Destroyed VMA.\n";
 }
