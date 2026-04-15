@@ -24,9 +24,17 @@ namespace vw
         inline VkSurfaceKHR getSurface() { return surface; }
         inline void setSurface(VkSurfaceKHR inSurface) { surface = inSurface; }
 
+        bool bResized = false;
+
     private:
         GLFWwindow *window;
         VkExtent2D extent;
         VkSurfaceKHR surface;
     };
+}
+
+static void onWindowResizedCallback(GLFWwindow *window, int width, int height)
+{
+    auto windowClass = reinterpret_cast<vw::Window *>(glfwGetWindowUserPointer(window));
+    windowClass->bResized = true;
 }

@@ -110,14 +110,14 @@ int main()
 
         VkResult presentResult = vkQueuePresentKHR(instance.getGraphicsQueue(), &presentInfo);
 
-        if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR)
+        if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR || mainWindow.bResized)
         {
             vkDeviceWaitIdle(instance.getDevice());
             // recreate swapchain
             int width = 0, height = 0;
             glfwGetFramebufferSize(mainWindow.getWindow(), &width, &height);
             swapchain.createSwapchain(instance, mainWindow);
-            swapchain.incrementFrame();
+            mainWindow.bResized = false;
             continue;
         }
 

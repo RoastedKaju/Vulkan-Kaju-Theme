@@ -11,7 +11,7 @@ void vw::Window::createWindow(const int width, const int height)
     }
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
     window = glfwCreateWindow(width, height, "VX-Widgets", nullptr, nullptr);
     if (!window)
@@ -22,6 +22,7 @@ void vw::Window::createWindow(const int width, const int height)
     }
 
     glfwSetWindowUserPointer(window, this);
+    glfwSetFramebufferSizeCallback(window, &onWindowResizedCallback);
 
     std::cout << "Window created\n";
 }
