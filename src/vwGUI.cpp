@@ -1,9 +1,10 @@
 #include "vwGUI.h"
+#include "vwSwapchain.h"
 
 void vw::GUI::createGUIContext(GLFWwindow *window, const utils::Context &context)
 {
     // create descriptor pool
-    VkDescriptorPoolSize poolSizes[] = {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 100};
+    VkDescriptorPoolSize poolSizes[] = {{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 100}};
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -18,6 +19,10 @@ void vw::GUI::createGUIContext(GLFWwindow *window, const utils::Context &context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
+
+    ImGuiIO &io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
     ImGui_ImplGlfw_InitForVulkan(window, true);
 
@@ -58,4 +63,45 @@ void vw::GUI::destroyGUIContext(VkDevice device)
     vkDestroyDescriptorPool(device, descriptorPool, nullptr);
 
     std::cout << "Destroyed GUI context.\n";
+}
+
+void vw::GUI::beginFrame()
+{
+    ImGui_ImplVulkan_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+}
+
+void vw::GUI::endFrame(VkCommandBuffer cmd, Swapchain &swapchain, uint32_t swapchainImageIndex)
+{
+    ImGui::Render();
+
+    ImGuiIO &io = ImGui::GetIO();
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindowsDefault();
+    }
+
+    VkClearValue clear_value{};
+    clear_value.color = {{0.1f, 0.2f, 0.5f, 1.0f}};
+
+    VkRenderingAttachmentInfo attachementInfo{};
+    attachementInfo.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+    attachementInfo.imageView = swapchain.getViews()[swapchainImageIndex];
+    attachementInfo.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    attachementInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachementInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachementInfo.clearValue = clear_value;
+
+    VkRenderingInfo renderingInfo{};
+    renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+    renderingInfo.renderArea = {{0, 0}, swapchain.getExtent()};
+    renderingInfo.layerCount = 1;
+    renderingInfo.colorAttachmentCount = 1;
+    renderingInfo.pColorAttachments = &attachementInfo;
+
+    vkCmdBeginRendering(cmd, &renderingInfo);
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
+    vkCmdEndRendering(cmd);
 }

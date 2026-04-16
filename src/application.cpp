@@ -81,14 +81,22 @@ int main()
         VkCommandBufferBeginInfo cmdBeginInfo = vw::utils::cmdBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
         VW_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
         {
-            vw::utils::transitionImage(cmd, swapchain.getImages().at(swapchainImageIndex), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+            // vw::utils::transitionImage(cmd, swapchain.getImages().at(swapchainImageIndex), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
             // clear color
-            float flash = std::abs(std::sin((float)glfwGetTime() * 2.0f));
-            VkClearColorValue clearValue = {{0.0f, 0.0f, flash, 1.0f}};
-            VkImageSubresourceRange clearRange = vw::utils::imageSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT);
-            vkCmdClearColorImage(cmd, swapchain.getImages().at(swapchainImageIndex), VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &clearRange);
+            // float flash = std::abs(std::sin((float)glfwGetTime() * 2.0f));
+            // VkClearColorValue clearValue = {{0.0f, 0.0f, flash, 1.0f}};
+            // VkImageSubresourceRange clearRange = vw::utils::imageSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT);
+            // vkCmdClearColorImage(cmd, swapchain.getImages().at(swapchainImageIndex), VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &clearRange);
 
-            vw::utils::transitionImage(cmd, swapchain.getImages().at(swapchainImageIndex), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+            vw::utils::transitionImage(cmd, swapchain.getImages().at(swapchainImageIndex), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+            gui.beginFrame();
+            {
+                ImGui::Begin("Demo");
+                ImGui::Text("Hello World!");
+                ImGui::End();
+            }
+            gui.endFrame(cmd, swapchain, swapchainImageIndex);
+            vw::utils::transitionImage(cmd, swapchain.getImages().at(swapchainImageIndex), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
         }
         VW_CHECK(vkEndCommandBuffer(cmd));
 

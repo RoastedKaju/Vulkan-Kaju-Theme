@@ -10,6 +10,8 @@
 
 namespace vw
 {
+    class Swapchain;
+
     class GUI
     {
     public:
@@ -18,6 +20,8 @@ namespace vw
 
         inline VkExtent2D getViewportSize() const { return VkExtent2D{(uint32_t)viewportSize.x, (uint32_t)viewportSize.y}; }
 
+        void beginFrame();
+        void endFrame(VkCommandBuffer cmd, Swapchain& swapchain, uint32_t swapchainImageIndex);
     private:
         VkDescriptorPool descriptorPool;
         VkSampler viewportSampler;
