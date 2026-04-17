@@ -1,88 +1,152 @@
-#include <iostream>
-#include <chrono>
-#include <thread>
-
-#include "instance.h"
-#include "kaju_window.h"
-#include "device.h"
-#include "memory_allocator.h"
-#include "swapchain.h"
-#include "frame_manager.h"
-#include "kaju_gui.h"
-#include "renderer.h"
+#include "vwInstance.h"
+#include "vwWindow.h"
+#include "vwSwapchain.h"
+#include "vwAllocator.h"
+#include "vwRenderTarget.h"
+#include "vwGUI.h"
+#include "vwUtils.h"
 
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
 
 int main()
 {
-    KajuWindow app_window{1024, 768};
-    Instance app_instance;
-    Device app_device;
-    MemoryAllocator app_allocator;
-    Swapchain app_swapchain;
-    FrameManager app_frame_manager{2};
-    KajuGui app_gui;
-    Renderer app_renderer;
+    vw::Window mainWindow{};
+    vw::Instance instance{};
+    vw::Allocator allocator{};
+    vw::Swapchain swapchain{};
+    vw::RenderTarget renderTarget{};
+    vw::GUI gui{};
 
-    app_window.createSurface(app_instance);
-    app_device.createDevice(app_instance, app_window);
-    app_allocator.createAllocator(app_instance, app_device);
-    app_swapchain.createSwapchain(app_device, app_window);
-    app_renderer.createOffscreenRenderTarget(app_device, app_allocator, app_window);
-    app_frame_manager.createFrameData(app_device);
-    app_gui.createGuiContext(app_device, app_swapchain, app_window, app_instance);
+    instance.createInstance();
+    mainWindow.createWindow(800, 600);
+    mainWindow.createSurface(instance);
+    instance.createDevice(mainWindow);
+    allocator.createAllocator(instance);
+    swapchain.createSwapchain(instance, mainWindow);
+    swapchain.createSyncStructures(instance);
+    renderTarget.createRenderTarget({800, 600}, allocator, instance);
+    // builder context object
+    vw::utils::Context renderingContext{};
+    renderingContext.instance = instance.getInstance();
+    renderingContext.physicalDevice = instance.getPhysicalDevice();
+    renderingContext.device = instance.getDevice();
+    renderingContext.graphicsQueue = instance.getGraphicsQueue();
+    renderingContext.graphicsQueueFamily = instance.getGraphicsQueueFamily();
+    renderingContext.swapchain = swapchain.getSwapchain();
+    renderingContext.swapchainFormat = swapchain.getFormat();
+    renderingContext.swapchainImageCount = swapchain.getImages().size();
+    renderingContext.drawImageView = renderTarget.getDrawImageView();
 
-    while (!glfwWindowShouldClose(app_window.getWindow()))
+    gui.createGUIContext(mainWindow.getWindow(), renderingContext);
+
+    // draw loop
+    while (!glfwWindowShouldClose(mainWindow.getWindow()))
     {
         glfwPollEvents();
 
+        // skip frame if invalid frame size
         int width = 0, height = 0;
-        glfwGetFramebufferSize(app_window.getWindow(), &width, &height);
-
-        // Skip frame if window minimized
-        if (width == 0 || height == 0)
+        glfwGetFramebufferSize(mainWindow.getWindow(), &width, &height);
+        if (!width || !height)
         {
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
             continue;
         }
 
-        // Draw
-        app_renderer.sync(app_frame_manager, app_device, app_swapchain);
-        app_renderer.recordCommands();
-        app_renderer.beginRendering();
+        vkDeviceWaitIdle(instance.getDevice());
+
+        VW_CHECK(vkWaitForFences(instance.getDevice(), 1, &swapchain.getCurrentFrameData().renderFence, true, 1000000000));
+        swapchain.getCurrentFrameData().frameDeletionQueue.flush();
+        VW_CHECK(vkResetFences(instance.getDevice(), 1, &swapchain.getCurrentFrameData().renderFence));
+
+        uint32_t swapchainImageIndex;
+        auto acquireResult = vkAcquireNextImageKHR(instance.getDevice(), swapchain.getSwapchain(), 1000000000, swapchain.getCurrentFrameData().acquireSemaphore, nullptr, &swapchainImageIndex);
+        if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR)
         {
-            app_renderer.prepareOffscreenImage();
-            // vkCmdBeginRendering(app_renderer.getCommandBuffer(), &rendering_info);
-            // {
-
-            // }
-            // vkCmdEndRendering(app_renderer.getCommandBuffer());
-            app_renderer.transitionOffscreenToShaderRead();
-
-            app_renderer.prepareSwapchainImage();
-            {
-                app_gui.beginFrame();
-                app_gui.buildDockingLayout();
-                app_gui.showDemo();
-                app_gui.endFrame(app_renderer.getCommandBuffer(), app_swapchain, app_renderer.getSwapchainImageIndex());
-            }
-            app_renderer.finalizeSwapchainImage();
+            // Swapchain is stale, recreate and retry next frame
+            int w = 0, h = 0;
+            glfwGetFramebufferSize(mainWindow.getWindow(), &w, &h);
+            swapchain.createSwapchain(instance, mainWindow);
+            swapchain.incrementFrame();
+            continue;
         }
-        app_renderer.endRendering();
-        // Submit
-        app_renderer.submit(app_device, app_swapchain, app_frame_manager, app_window);
+        if (acquireResult != VK_SUCCESS && acquireResult != VK_SUBOPTIMAL_KHR)
+        {
+            VW_CHECK(acquireResult); // only fatal on real errors
+        }
+
+        VkCommandBuffer cmd = swapchain.getCurrentFrameData().cmdBuffer;
+        VW_CHECK(vkResetCommandBuffer(cmd, 0));
+
+        VkCommandBufferBeginInfo cmdBeginInfo = vw::utils::cmdBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+        VW_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
+        {
+            // vw::utils::transitionImage(cmd, swapchain.getImages().at(swapchainImageIndex), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+            // clear color
+            // float flash = std::abs(std::sin((float)glfwGetTime() * 2.0f));
+            // VkClearColorValue clearValue = {{0.0f, 0.0f, flash, 1.0f}};
+            // VkImageSubresourceRange clearRange = vw::utils::imageSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT);
+            // vkCmdClearColorImage(cmd, swapchain.getImages().at(swapchainImageIndex), VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &clearRange);
+
+            vw::utils::transitionImage(cmd, swapchain.getImages().at(swapchainImageIndex), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+            gui.beginFrame();
+            {
+                // ImGui::Begin("Demo");
+                // ImGui::Text("Hello World!");
+                // ImGui::End();
+                ImGui::ShowDemoWindow();
+            }
+            gui.endFrame(cmd, swapchain, swapchainImageIndex);
+            vw::utils::transitionImage(cmd, swapchain.getImages().at(swapchainImageIndex), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+        }
+        VW_CHECK(vkEndCommandBuffer(cmd));
+
+        // present and submit
+        VkCommandBufferSubmitInfo cmdInfo = vw::utils::cmdBufferSubmitInfo(cmd);
+        VkSemaphoreSubmitInfo waitInfo = vw::utils::semaphoreSubmitInfo(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR, swapchain.getCurrentFrameData().acquireSemaphore);
+        VkSemaphoreSubmitInfo signalInfo = vw::utils::semaphoreSubmitInfo(VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT, swapchain.getReleaseSemaphores()[swapchainImageIndex]);
+
+        VkSubmitInfo2 submit = vw::utils::submitInfo(&cmdInfo, &signalInfo, &waitInfo);
+        VW_CHECK(vkQueueSubmit2(instance.getGraphicsQueue(), 1, &submit, swapchain.getCurrentFrameData().renderFence));
+
+        VkPresentInfoKHR presentInfo = {VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
+        auto sc = swapchain.getSwapchain();
+        presentInfo.pSwapchains = &sc;
+        presentInfo.swapchainCount = 1;
+        presentInfo.pWaitSemaphores = &swapchain.getReleaseSemaphores()[swapchainImageIndex];
+        presentInfo.waitSemaphoreCount = 1;
+        presentInfo.pImageIndices = &swapchainImageIndex;
+
+        VkResult presentResult = vkQueuePresentKHR(instance.getGraphicsQueue(), &presentInfo);
+
+        if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR || mainWindow.bResized)
+        {
+            vkDeviceWaitIdle(instance.getDevice());
+            // recreate swapchain
+            int width = 0, height = 0;
+            glfwGetFramebufferSize(mainWindow.getWindow(), &width, &height);
+            swapchain.createSwapchain(instance, mainWindow);
+            mainWindow.bResized = false;
+            continue;
+        }
+
+        VW_CHECK(presentResult);
+
+        swapchain.incrementFrame();
     }
 
-    // Clean up
-    app_device.deviceWaitIdle();
-    app_gui.destroyGuiContext(app_device);
-    app_frame_manager.destroyFrameData(app_device);
-    app_allocator.destroyAllocator();
-    app_swapchain.destroySwapchain(app_device);
-    app_device.destroyDevice();
-    app_window.destroySurface(app_instance);
-    app_instance.destroyInstance();
+    // wait before destroying
+    vkDeviceWaitIdle(instance.getDevice());
+
+    gui.destroyGUIContext(instance.getDevice());
+    renderTarget.destroyRenderTarget(instance, allocator);
+    swapchain.destroySyncStructures(instance);
+    swapchain.destroySwapchain(instance);
+    allocator.destroyAllocator();
+    instance.destroyDevice();
+    mainWindow.destroySurface(instance);
+    mainWindow.destroyWindow();
+    instance.destroyInstance();
 
     return EXIT_SUCCESS;
 }
