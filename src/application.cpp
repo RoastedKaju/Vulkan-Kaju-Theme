@@ -91,9 +91,10 @@ int main()
             vw::utils::transitionImage(cmd, swapchain.getImages().at(swapchainImageIndex), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
             gui.beginFrame();
             {
-                ImGui::Begin("Demo");
-                ImGui::Text("Hello World!");
-                ImGui::End();
+                // ImGui::Begin("Demo");
+                // ImGui::Text("Hello World!");
+                // ImGui::End();
+                ImGui::ShowDemoWindow();
             }
             gui.endFrame(cmd, swapchain, swapchainImageIndex);
             vw::utils::transitionImage(cmd, swapchain.getImages().at(swapchainImageIndex), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);

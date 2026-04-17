@@ -76,13 +76,6 @@ void vw::GUI::endFrame(VkCommandBuffer cmd, Swapchain &swapchain, uint32_t swapc
 {
     ImGui::Render();
 
-    ImGuiIO &io = ImGui::GetIO();
-    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-    {
-        ImGui::UpdatePlatformWindows();
-        ImGui::RenderPlatformWindowsDefault();
-    }
-
     VkClearValue clear_value{};
     clear_value.color = {{0.1f, 0.2f, 0.5f, 1.0f}};
 
@@ -104,4 +97,12 @@ void vw::GUI::endFrame(VkCommandBuffer cmd, Swapchain &swapchain, uint32_t swapc
     vkCmdBeginRendering(cmd, &renderingInfo);
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
     vkCmdEndRendering(cmd);
+
+    // update child viewports
+    ImGuiIO &io = ImGui::GetIO();
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindowsDefault();
+    }
 }
