@@ -6,7 +6,9 @@
 void vw::Swapchain::createSwapchain(Instance &instance, Window &window)
 {
     format = VK_FORMAT_R8G8B8A8_UNORM;
-    const VkExtent2D builderExtent = window.getWindowExtent();
+    int width, height;
+    glfwGetFramebufferSize(window.getWindow(), &width, &height);
+    const VkExtent2D builderExtent = {(uint32_t)width, (uint32_t)height};
 
     vkb::SwapchainBuilder builder{instance.getPhysicalDevice(), instance.getDevice(), window.getSurface()};
     builder.set_desired_extent(builderExtent.width, builderExtent.height);

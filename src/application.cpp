@@ -5,6 +5,8 @@
 #include "vwRenderTarget.h"
 #include "vwGUI.h"
 #include "vwUtils.h"
+#include "vwDockspace.h"
+#include "vwConsole.h"
 
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
@@ -17,6 +19,8 @@ int main()
     vw::Swapchain swapchain{};
     vw::RenderTarget renderTarget{};
     vw::GUI gui{};
+    vw::Dockspace dockspace{};
+    vw::Console console{};
 
     instance.createInstance();
     mainWindow.createWindow(800, 600);
@@ -53,7 +57,14 @@ int main()
             continue;
         }
 
-        vkDeviceWaitIdle(instance.getDevice());
+        // on window resize recreate the swapchain
+        if (mainWindow.bResized)
+        {
+            mainWindow.bResized = false;
+            vkDeviceWaitIdle(instance.getDevice());
+            swapchain.createSwapchain(instance, mainWindow);
+            continue;
+        }
 
         VW_CHECK(vkWaitForFences(instance.getDevice(), 1, &swapchain.getCurrentFrameData().renderFence, true, 1000000000));
         swapchain.getCurrentFrameData().frameDeletionQueue.flush();
@@ -81,20 +92,12 @@ int main()
         VkCommandBufferBeginInfo cmdBeginInfo = vw::utils::cmdBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
         VW_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
         {
-            // vw::utils::transitionImage(cmd, swapchain.getImages().at(swapchainImageIndex), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
-            // clear color
-            // float flash = std::abs(std::sin((float)glfwGetTime() * 2.0f));
-            // VkClearColorValue clearValue = {{0.0f, 0.0f, flash, 1.0f}};
-            // VkImageSubresourceRange clearRange = vw::utils::imageSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT);
-            // vkCmdClearColorImage(cmd, swapchain.getImages().at(swapchainImageIndex), VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &clearRange);
-
             vw::utils::transitionImage(cmd, swapchain.getImages().at(swapchainImageIndex), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
             gui.beginFrame();
             {
-                // ImGui::Begin("Demo");
-                // ImGui::Text("Hello World!");
-                // ImGui::End();
-                ImGui::ShowDemoWindow();
+                // ImGui::ShowDemoWindow();
+                dockspace.showDockspace();
+                console.showConsole(dockspace.getID());
             }
             gui.endFrame(cmd, swapchain, swapchainImageIndex);
             vw::utils::transitionImage(cmd, swapchain.getImages().at(swapchainImageIndex), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
@@ -119,18 +122,16 @@ int main()
 
         VkResult presentResult = vkQueuePresentKHR(instance.getGraphicsQueue(), &presentInfo);
 
-        if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR || mainWindow.bResized)
+        if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR)
         {
             vkDeviceWaitIdle(instance.getDevice());
-            // recreate swapchain
-            int width = 0, height = 0;
-            glfwGetFramebufferSize(mainWindow.getWindow(), &width, &height);
             swapchain.createSwapchain(instance, mainWindow);
-            mainWindow.bResized = false;
             continue;
         }
-
-        VW_CHECK(presentResult);
+        else
+        {
+            VW_CHECK(presentResult);
+        }
 
         swapchain.incrementFrame();
     }
