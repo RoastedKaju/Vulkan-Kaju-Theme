@@ -18,7 +18,7 @@ void vw::GUI::createGUIContext(GLFWwindow *window, const utils::Context &context
     // initialize imgui
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGui::StyleColorsDark();
+    // ImGui::StyleColorsDark();
     setColorThemePabloDark();
 
     ImGuiIO &io = ImGui::GetIO();

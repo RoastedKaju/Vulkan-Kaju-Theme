@@ -6,10 +6,12 @@
 #include "vwGUI.h"
 #include "vwUtils.h"
 #include "vwDockspace.h"
+#include "vwViewport.h"
 #include "vwConsole.h"
 
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
+#include <filesystem>
 
 int main()
 {
@@ -20,6 +22,7 @@ int main()
     vw::RenderTarget renderTarget{};
     vw::GUI gui{};
     vw::Dockspace dockspace{};
+    vw::Viewport viewport{};
     vw::Console console{};
 
     instance.createInstance();
@@ -43,6 +46,12 @@ int main()
     renderingContext.drawImageView = renderTarget.getDrawImageView();
 
     gui.createGUIContext(mainWindow.getWindow(), renderingContext);
+
+    // check for .ini files
+    if (!std::filesystem::exists("imgui.ini"))
+    {
+        dockspace.setLayoutNextFrame(true);
+    }
 
     // draw loop
     while (!glfwWindowShouldClose(mainWindow.getWindow()))
@@ -97,7 +106,8 @@ int main()
             {
                 // ImGui::ShowDemoWindow();
                 dockspace.showDockspace();
-                console.showConsole(dockspace.getID());
+                viewport.showViewport(dockspace.getID());
+                console.showConsole(viewport.getID());
             }
             gui.endFrame(cmd, swapchain, swapchainImageIndex);
             vw::utils::transitionImage(cmd, swapchain.getImages().at(swapchainImageIndex), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);

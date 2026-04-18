@@ -30,6 +30,8 @@ namespace vw
         VkSampler viewportSampler;
         ImTextureID viewportTexture;
         ImVec2 viewportSize;
+
+        
     };
 
     class GuiElement

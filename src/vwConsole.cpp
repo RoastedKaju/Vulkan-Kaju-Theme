@@ -10,15 +10,10 @@ vw::Console::Console()
 void vw::Console::showConsole(ImGuiID parentId)
 {
     static bool firstRun = true;
-    if (firstRun)
+    if (firstRun && parentId != 0)
     {
         elementId = ImGui::GetID("Console");
         firstRun = false;
-    }
-
-    if (parentId != 0)
-    {
-        ImGui::SetNextWindowDockID(parentId, ImGuiCond_FirstUseEver);
     }
 
     if (!ImGui::Begin("Console"))
