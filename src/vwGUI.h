@@ -21,11 +21,24 @@ namespace vw
         inline VkExtent2D getViewportSize() const { return VkExtent2D{(uint32_t)viewportSize.x, (uint32_t)viewportSize.y}; }
 
         void beginFrame();
-        void endFrame(VkCommandBuffer cmd, Swapchain& swapchain, uint32_t swapchainImageIndex);
+        void endFrame(VkCommandBuffer cmd, Swapchain &swapchain, uint32_t swapchainImageIndex);
+
+        static void setColorThemePabloDark();
+
     private:
         VkDescriptorPool descriptorPool;
         VkSampler viewportSampler;
         ImTextureID viewportTexture;
         ImVec2 viewportSize;
+    };
+
+    class GuiElement
+    {
+    public:
+        virtual ~GuiElement() = default;
+        inline ImGuiID getID() const { return elementId; }
+
+    protected:
+        ImGuiID elementId;
     };
 }
