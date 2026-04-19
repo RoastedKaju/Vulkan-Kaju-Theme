@@ -8,6 +8,7 @@
 #include "vwDockspace.h"
 #include "vwViewport.h"
 #include "vwConsole.h"
+#include "vwOutliner.h"
 
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
@@ -24,6 +25,7 @@ int main()
     vw::Dockspace dockspace{};
     vw::Viewport viewport{};
     vw::Console console{};
+    vw::Outliner outliner{};
 
     instance.createInstance();
     mainWindow.createWindow(800, 600);
@@ -108,6 +110,7 @@ int main()
                 dockspace.showDockspace();
                 viewport.showViewport(dockspace.getID());
                 console.showConsole(viewport.getID());
+                outliner.showOutliner(viewport.getID());
             }
             gui.endFrame(cmd, swapchain, swapchainImageIndex);
             vw::utils::transitionImage(cmd, swapchain.getImages().at(swapchainImageIndex), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);

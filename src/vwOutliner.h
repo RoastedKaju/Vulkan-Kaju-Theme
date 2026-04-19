@@ -7,5 +7,9 @@ namespace vw
 {
     class Outliner : public GuiElement
     {
+    public:
+        void showOutliner(ImGuiID parentId);
+    private:
+
     };
 }
