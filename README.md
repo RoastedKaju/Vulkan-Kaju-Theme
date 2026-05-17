@@ -14,6 +14,12 @@ You can also use this project as a starting point for any of your vulkan project
 - Restore to default Layout for first time running
 - Unity like editor layout
 
+## Getting Started
+- Recursive pull this repository alongside all of its sub-modules `git clone --recursive https://github.com/RoastedKaju/Vulkan-KajuTheme`
+- Open the folder with Visual Studio Code.
+- Configure CMake.
+- Build and Run.
+
 ## Built With
 - **Language**: C++ 20
 - **Build System**: CMake
