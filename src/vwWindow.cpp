@@ -14,7 +14,7 @@ void vw::Window::createWindow(const int width, const int height)
     glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
     glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
 
-    window = glfwCreateWindow(width, height, "VX-Widgets", nullptr, nullptr);
+    window = glfwCreateWindow(width, height, "Kaju-Theme", nullptr, nullptr);
     if (!window)
     {
         glfwTerminate();
