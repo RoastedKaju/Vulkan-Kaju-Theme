@@ -15,6 +15,7 @@ find_package(Vulkan REQUIRED COMPONENTS shaderc_combined)
 add_executable(${PROJECT_NAME})
 file(GLOB_RECURSE SRC_FILES "source/*.cpp" "source/*.hpp")
 target_sources(${PROJECT_NAME} PRIVATE ${SRC_FILES})
+target_include_directories(${PROJECT_NAME} PRIVATE "source")
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     Vulkan::Vulkan
@@ -23,3 +24,5 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     glm
     volk
 )
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE VK_NO_PROTOTYPES)
