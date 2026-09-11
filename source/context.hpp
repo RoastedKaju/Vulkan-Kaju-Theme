@@ -5,6 +5,8 @@
 #include <volk.h>
 #include <vma/vk_mem_alloc.h>
 
+struct GLFWwindow;
+
 class Context
 {
 public:
@@ -13,12 +15,29 @@ public:
     static constexpr VkFormat cSwapchainFormat{VK_FORMAT_B8G8R8A8_SRGB};
     static constexpr VkFormat cDepthFormat{VK_FORMAT_D32_SFLOAT};
 
-    void init();
+    void init(GLFWwindow *inWindow);
 
     void shutdown();
 
 private:
     void createInstance();
 
-    VkInstance mInstance;
+    void createSurface();
+
+    void findPhysicalDevice();
+
+    void findGraphicsQueue();
+
+    void createDevice();
+
+    void initializeVMA();
+
+    GLFWwindow *pWindow{nullptr};
+    VkInstance mInstance{VK_NULL_HANDLE};
+    VkSurfaceKHR mSurface{VK_NULL_HANDLE};
+    VkPhysicalDevice mPhysicalDevice{VK_NULL_HANDLE};
+    VkQueue mGraphicsQueue{VK_NULL_HANDLE};
+    uint32_t mGraphicsQueueFamily{UINT32_MAX};
+    VkDevice mDevice{VK_NULL_HANDLE};
+    VmaAllocator mAllocator{VK_NULL_HANDLE};
 };

@@ -18,5 +18,6 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
+    std::cout << "Exiting with Code 0" << std::endl;
     return EXIT_SUCCESS;
 }

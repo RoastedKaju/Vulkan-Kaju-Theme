@@ -2,7 +2,7 @@
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
 
-static void OnKeyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
+static void onKeyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
     if (action == GLFW_RELEASE)
     {
@@ -13,7 +13,7 @@ static void OnKeyCallback(GLFWwindow *window, int key, int scancode, int action,
     }
 }
 
-static void OnFrameResize(GLFWwindow *window, int width, int height)
+static void onFrameResized(GLFWwindow *window, int width, int height)
 {
     if (Application *app = static_cast<Application *>(glfwGetWindowUserPointer(window)))
     {
@@ -37,10 +37,10 @@ bool Application::init()
     }
 
     glfwSetWindowUserPointer(pWindow, this);
-    glfwSetKeyCallback(pWindow, &OnKeyCallback);
-    glfwSetFramebufferSizeCallback(pWindow, &OnFrameResize);
+    glfwSetKeyCallback(pWindow, &onKeyCallback);
+    glfwSetFramebufferSizeCallback(pWindow, &onFrameResized);
 
-    mContext.init();
+    mContext.init(pWindow);
 
     return true;
 }
