@@ -578,7 +578,29 @@ void Context::createSyncResources()
 
 void Context::createCommandBuffers()
 {
-    
+    for (FrameResources &res : mFrameResources)
+    {
+        VkCommandPoolCreateInfo poolInfo{
+            .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+            .queueFamilyIndex = mGraphicsQueueFamily};
+        if (vkCreateCommandPool(mDevice, &poolInfo, nullptr, &res.mCommandPool) != VK_SUCCESS)
+        {
+            throw std::runtime_error("Unable to create command buffer pool");
+        }
+
+        // create command buffer for this frame
+        VkCommandBufferAllocateInfo cmdAllocInfo{
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+            .commandPool = res.mCommandPool,
+            .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+            .commandBufferCount = 1};
+        if (vkAllocateCommandBuffers(mDevice, &cmdAllocInfo, &res.mCommandBuffer) != VK_SUCCESS)
+        {
+            throw std::runtime_error("Unable to allocate command buffer");
+        }
+    }
+
+    std::cout << "Allocated command buffers per-frame.\n";
 }
 
 void Context::destroySwapchain()
@@ -618,6 +640,36 @@ void Context::createShaders()
 
 void Context::shutdown()
 {
+    // wait in case resources are in use
+    vkDeviceWaitIdle(mDevice);
+    // frame/sync object cleanup
+    if (timelineSemaphore)
+    {
+        vkDestroySemaphore(mDevice, timelineSemaphore, nullptr);
+    }
+    for (auto &res : mFrameResources)
+    {
+        vkDestroySemaphore(mDevice, res.mImageAcquireSemaphore, nullptr);
+        vkDestroyCommandPool(mDevice, res.mCommandPool, nullptr);
+    }
+    // pipeline clean up
+    if (mPipelineLayout)
+    {
+        vkDestroyPipelineLayout(mDevice, mPipelineLayout, nullptr);
+    }
+    if (mPipeline)
+    {
+        vkDestroyPipeline(mDevice, mPipeline, nullptr);
+    }
+    // clean up shaders
+    if (mVertShader)
+    {
+        vkDestroyShaderModule(mDevice, mVertShader, nullptr);
+    }
+    if (mFragShader)
+    {
+        vkDestroyShaderModule(mDevice, mFragShader, nullptr);
+    }
     // clean up swapchain
     destroySwapchain();
     // VMA
