@@ -1,12 +1,20 @@
 #pragma once
 
 #include <string>
+#include <array>
 #include <vector>
 #include <volk.h>
 #include <vma/vk_mem_alloc.h>
 #include <shaderc/shaderc.hpp>
 
 struct GLFWwindow;
+
+struct FrameResources
+{
+    VkCommandPool mCommandPool{VK_NULL_HANDLE};
+    VkCommandBuffer mCommandBuffer{VK_NULL_HANDLE};
+    VkSemaphore mImageAcquireSemaphore{VK_NULL_HANDLE};
+};
 
 class Context
 {
@@ -41,6 +49,12 @@ private:
 
     void createShaders();
 
+    void createGraphicsPipeline();
+
+    void createSyncResources();
+
+    void createCommandBuffers();
+
     GLFWwindow *pWindow{nullptr};
     VkInstance mInstance{VK_NULL_HANDLE};
     VkSurfaceKHR mSurface{VK_NULL_HANDLE};
@@ -61,4 +75,9 @@ private:
     VmaAllocation mDepthImageAllocation{VK_NULL_HANDLE};
     VkShaderModule mVertShader{VK_NULL_HANDLE};
     VkShaderModule mFragShader{VK_NULL_HANDLE};
+    VkPipelineLayout mPipelineLayout{VK_NULL_HANDLE};
+    VkPipeline mPipeline{VK_NULL_HANDLE};
+    // frame and synchronization resources
+    VkSemaphore timelineSemaphore = nullptr;
+    std::array<FrameResources, cMaxFramesInFlight> mFrameResources;
 };

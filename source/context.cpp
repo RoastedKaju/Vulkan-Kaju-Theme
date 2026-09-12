@@ -30,6 +30,9 @@ void Context::init(GLFWwindow *inWindow)
     initializeVMA();
     createSwapchain(width, height);
     createShaders();
+    createGraphicsPipeline();
+    createSyncResources();
+    createCommandBuffers();
 }
 
 VkShaderModule Context::createShaderModule(const std::string &fileName, shaderc_shader_kind kind) const
@@ -435,6 +438,147 @@ void Context::createSwapchain(uint32_t inWidth, uint32_t inHeight)
 
     std::cout << "Created swapchain with " << mSwapchainImages.size() << " images.\n";
     std::cout << "Depth image created.\n";
+}
+
+void Context::createGraphicsPipeline()
+{
+    // need to define a pipeline layout
+    VkPipelineLayoutCreateInfo pipelineLayoutInfo{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .setLayoutCount = 0,
+        .pushConstantRangeCount = 0};
+    if (vkCreatePipelineLayout(mDevice, &pipelineLayoutInfo, nullptr, &mPipelineLayout) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Unable to create pipeline layout");
+    }
+
+    // configure shader stages struct
+    const char *entryPoint = "main";
+    std::vector<VkPipelineShaderStageCreateInfo> shaderStages{
+        {.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+         .stage = VK_SHADER_STAGE_VERTEX_BIT,
+         .module = mVertShader,
+         .pName = entryPoint},
+        {.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+         .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+         .module = mFragShader,
+         .pName = entryPoint}};
+
+    // vertex pulling, don't define vertex input details
+    VkPipelineVertexInputStateCreateInfo vertInputInfo{.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
+
+    // input assembly, we will be drawing triangle list
+    VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+        .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST};
+
+    // depth/stencil configuration
+    VkPipelineDepthStencilStateCreateInfo depthStencilInfo{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+        .depthTestEnable = VK_TRUE,
+        .depthWriteEnable = VK_TRUE,
+        .depthCompareOp = VK_COMPARE_OP_LESS,
+        .stencilTestEnable = VK_FALSE};
+
+    // viewport
+    VkPipelineViewportStateCreateInfo viewportInfo{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+        .viewportCount = 1,
+        .pViewports = nullptr,
+        .scissorCount = 1,
+        .pScissors = nullptr};
+
+    // rasterizer settings
+    VkPipelineRasterizationStateCreateInfo rasterInfo{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+        .polygonMode = VK_POLYGON_MODE_FILL,
+        .cullMode = VK_CULL_MODE_BACK_BIT,
+        .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
+        .lineWidth = 1.0f};
+
+    // no multisampling
+    VkPipelineMultisampleStateCreateInfo multiSampleInfo{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+        .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT};
+
+    // Alpha blending
+    VkPipelineColorBlendAttachmentState attachState{
+        .blendEnable = VK_FALSE,
+        .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT};
+    VkPipelineColorBlendStateCreateInfo blendInfo{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+        .attachmentCount = 1,
+        .pAttachments = &attachState};
+
+    // enable dynamic states
+    std::vector<VkDynamicState> dynamicStates{VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
+    VkPipelineDynamicStateCreateInfo dynamicStateInfo{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+        .dynamicStateCount = (uint32_t)dynamicStates.size(),
+        .pDynamicStates = dynamicStates.data()};
+
+    // structure required for dynamic rendering
+    VkPipelineRenderingCreateInfo renderInfo{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
+        .colorAttachmentCount = 1,
+        .pColorAttachmentFormats = &cSwapchainFormat,
+        .depthAttachmentFormat = cDepthFormat};
+
+    // create the graphics pipeline
+    VkGraphicsPipelineCreateInfo pipelineInfo{
+        .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .pNext = &renderInfo,
+        .stageCount = (uint32_t)shaderStages.size(),
+        .pStages = shaderStages.data(),
+        .pVertexInputState = &vertInputInfo,
+        .pInputAssemblyState = &inputAssemblyInfo,
+        .pViewportState = &viewportInfo,
+        .pRasterizationState = &rasterInfo,
+        .pMultisampleState = &multiSampleInfo,
+        .pDepthStencilState = &depthStencilInfo,
+        .pColorBlendState = &blendInfo,
+        .pDynamicState = &dynamicStateInfo,
+        .layout = mPipelineLayout,
+        .renderPass = VK_NULL_HANDLE};
+    if (vkCreateGraphicsPipelines(mDevice, nullptr, 1, &pipelineInfo, nullptr, &mPipeline) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Error creating the pipeline");
+    }
+
+    std::cout << "Created graphics pipeline.\n";
+}
+
+void Context::createSyncResources()
+{
+    VkSemaphoreTypeCreateInfo semaphoreTypeInfo{
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
+        .semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE,
+        .initialValue = cMaxFramesInFlight};
+    VkSemaphoreCreateInfo semaphoreInfo{
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+        .pNext = &semaphoreTypeInfo};
+    if (vkCreateSemaphore(mDevice, &semaphoreInfo, nullptr, &timelineSemaphore) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Unable to create the timeline semaphore");
+    }
+
+    // per-frame image-acquire semaphores
+    for (FrameResources &res : mFrameResources)
+    {
+        // create the binary semaphores
+        VkSemaphoreCreateInfo semaphoreInfo{.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
+        if (vkCreateSemaphore(mDevice, &semaphoreInfo, nullptr, &res.mImageAcquireSemaphore) != VK_SUCCESS)
+        {
+            throw std::runtime_error("Error creating the per-frame image acquire semaphore");
+        }
+    }
+
+    std::cout << "Create per-image acquire semaphores with timeline type semaphore.\n";
+}
+
+void Context::createCommandBuffers()
+{
+    
 }
 
 void Context::destroySwapchain()
