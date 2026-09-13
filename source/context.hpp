@@ -26,6 +26,8 @@ public:
 
     void init(GLFWwindow *inWindow);
 
+    void render();
+
     VkShaderModule createShaderModule(const std::string &fileName, shaderc_shader_kind kind) const;
 
     void shutdown();
@@ -67,7 +69,7 @@ private:
     std::vector<VkImage> mSwapchainImages;
     std::vector<VkImageView> mSwapchainImageViews;
     std::vector<VkSemaphore> mRenderCompleteSemaphores;
-    bool requireSwapchainRecreate = false;
+    bool bRequireSwapchainRecreate = false;
     uint32_t mSwapchainWidth{0};
     uint32_t mSwapchainHeight{0};
     VkImage mDepthImage{VK_NULL_HANDLE};
@@ -80,4 +82,6 @@ private:
     // frame and synchronization resources
     VkSemaphore timelineSemaphore = nullptr;
     std::array<FrameResources, cMaxFramesInFlight> mFrameResources;
+    uint32_t mFrameIndex{0};
+    uint64_t mNextSignalValue{cMaxFramesInFlight};
 };

@@ -51,6 +51,17 @@ void Application::run()
     {
         // poll events
         glfwPollEvents();
+
+        int width, height;
+        glfwGetFramebufferSize(pWindow, &width, &height);
+        // window is minimized
+        while (width == 0 || height == 0)
+        {
+            glfwGetFramebufferSize(pWindow, &width, &height);
+            glfwWaitEvents();
+        }
+
+        mContext.render();
     }
 }
 
